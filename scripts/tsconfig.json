@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "paths": { "@bufo/shared": ["../packages/shared/src/index.ts"] }
+  },
+  "include": ["*.ts"]
+}

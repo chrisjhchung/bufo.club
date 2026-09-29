@@ -1,0 +1,44 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths: ['infra/terraform/**']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: tfvars file to use
+        type: choice
+        options: [production, staging]
+        default: production
+      action:
+        description: plan or apply
+        type: choice
+        options: [plan, apply]
+        default: plan
+
+defaults:
+  run:
+    working-directory: infra/terraform
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # R2 credentials for the S3-compatible state backend.
+      AWS_ACCESS_KEY_ID: ${{ secrets.TFSTATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TFSTATE_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL_S3: ${{ secrets.TFSTATE_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+
+      - run: terraform fmt -check -recursive
+      - run: terraform init
+
+      - name: Plan
+        run: terraform plan -var-file=envs/${{ inputs.environment || 'production' }}.tfvars
+
+      - name: Apply
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve -var-file=envs/${{ inputs.environment || 'production' }}.tfvars

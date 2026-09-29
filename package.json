@@ -1,0 +1,40 @@
+{
+  "name": "bufo-club",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter \"./apps/**\" dev",
+    "build": "pnpm --filter @bufo/shared build && pnpm --filter @bufo/gen build && pnpm --filter @bufo/web build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "deploy": "pnpm build && pnpm --filter @bufo/api deploy",
+    "db:migrate:local": "pnpm --filter @bufo/api db:migrate:local",
+    "db:migrate:remote": "pnpm --filter @bufo/api db:migrate:remote",
+    "seed": "tsx scripts/seed-all-the-bufo.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.6",
+    "@types/node": "^26.6.3",
+    "aws4fetch": "^1.0.20",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd",
+      "sharp",
+      "@biomejs/biome"
+    ]
+  },
+  "dependencies": {
+    "@bufo/shared": "workspace:*"
+  }
+}

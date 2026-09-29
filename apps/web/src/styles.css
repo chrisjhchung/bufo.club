@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+/* Theme is a class on <html> so the toggle beats the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/instrument-serif-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F,
+    U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/instrument-serif-latin-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F,
+    U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * Warm paper by day, wet stone by night. Colour lives in these two blocks and
+ * nowhere else, so components never carry a `dark:` variant for colour.
+ */
+:root {
+  --paper: #f5f2ea;
+  --raise: #ffffff;
+  --sunk: #ebe7dc;
+  --ink: #1b1d16;
+  --ink-soft: #6b6f61;
+  --ink-faint: #9a9d90;
+  --line: rgb(27 29 22 / 11%);
+  --line-strong: rgb(27 29 22 / 22%);
+  --accent: #2f6b3f;
+  --accent-ink: #f5f2ea;
+  --accent-soft: rgb(47 107 63 / 10%);
+  --shadow-soft: 0 1px 2px rgb(27 29 22 / 4%), 0 8px 24px -12px rgb(27 29 22 / 18%);
+  --shadow-lift: 0 2px 4px rgb(27 29 22 / 5%), 0 18px 40px -18px rgb(27 29 22 / 28%);
+}
+
+html.dark {
+  --paper: #0f1210;
+  --raise: #171b17;
+  --sunk: #0a0c0a;
+  --ink: #e9e7dd;
+  --ink-soft: #9aa093;
+  --ink-faint: #6b7167;
+  --line: rgb(233 231 221 / 12%);
+  --line-strong: rgb(233 231 221 / 24%);
+  --accent: #9ec89b;
+  --accent-ink: #0f1210;
+  --accent-soft: rgb(158 200 155 / 14%);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px -12px rgb(0 0 0 / 60%);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 45%), 0 18px 40px -18px rgb(0 0 0 / 70%);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raise: var(--raise);
+  --color-sunk: var(--sunk);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+
+  --font-display: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
+
+  /* One easing curve for the whole site: a quick start that settles. */
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-gentle: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-synthesis-weight: none;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Only where transparency actually needs explaining — the generator slots. */
+  .checker {
+    background-image:
+      linear-gradient(45deg, var(--line) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--line) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--line) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--line) 75%);
+    background-size: 12px 12px;
+    background-position:
+      0 0,
+      0 6px,
+      6px -6px,
+      -6px 0;
+  }
+}
+
+@layer components {
+  /* Wordmark and headlines. Tight, optically corrected. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    line-height: 1.02;
+  }
+
+  .eyebrow {
+    @apply text-ink-faint text-xs uppercase;
+    letter-spacing: 0.14em;
+  }
+
+  /* Cards rise toward the cursor rather than lighting up. */
+  .lift {
+    transition:
+      transform 260ms var(--ease-settle),
+      box-shadow 260ms var(--ease-settle),
+      background-color 200ms var(--ease-gentle);
+  }
+
+  .lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .rise {
+    animation: rise 520ms var(--ease-settle) both;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .fade-in {
+    animation: fade-in 420ms var(--ease-gentle) both;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* biome-ignore lint/complexity/noImportantStyles: honouring the OS setting has to beat every local rule */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .lift:hover {
+    transform: none;
+  }
+}

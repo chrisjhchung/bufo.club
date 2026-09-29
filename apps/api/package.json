@@ -1,0 +1,27 @@
+{
+  "name": "@bufo/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "mkdir -p ../web/dist && vitest run",
+    "cf-typegen": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply bufo-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply bufo-db --remote"
+  },
+  "dependencies": {
+    "@bufo/shared": "workspace:*",
+    "hono": "^4.7.0",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.9.0",
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5",
+    "wrangler": "^4.141.0"
+  }
+}

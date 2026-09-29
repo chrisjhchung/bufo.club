@@ -1,0 +1,121 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bufo-club",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // The SPA is served straight from the assets store (unmetered), so gallery
+  // browsing never burns Worker requests. Only /api/* runs code.
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "vars": {
+    "ENVIRONMENT": "dev",
+    "CDN_BASE": "http://localhost:8787/api/cdn",
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    "ADMIN_EMAILS": "",
+    "DEV_ADMIN_EMAIL": "dev@bufo.club"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bufo-db",
+      "database_id": "local-dev-placeholder",
+      "migrations_dir": "../../db/migrations"
+    }
+  ],
+
+  "r2_buckets": [
+    { "binding": "ASSETS_BUCKET", "bucket_name": "bufo-assets" },
+    { "binding": "PENDING_BUCKET", "bucket_name": "bufo-pending" }
+  ],
+
+  "ratelimits": [
+    { "name": "SUBMIT_LIMITER", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } },
+    { "name": "REPORT_LIMITER", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } }
+  ],
+
+  "env": {
+    "staging": {
+      "name": "bufo-club-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "CDN_BASE": "https://cdn-staging.bufo.club",
+        // From `terraform output worker_vars` after the first apply.
+        "ACCESS_TEAM_DOMAIN": "zuo-studios.cloudflareaccess.com",
+        "ACCESS_AUD": "ca805d0c66d098155b56c9c74f35e9bf390814f160299dbf2a400fcdc696261e",
+        "ADMIN_EMAILS": "chrisjhchung@gmail.com",
+        "DEV_ADMIN_EMAIL": ""
+      },
+      "assets": {
+        "directory": "../web/dist",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "bufo-db-staging",
+          "database_id": "REPLACE_WITH_TERRAFORM_OUTPUT",
+          "migrations_dir": "../../db/migrations"
+        }
+      ],
+      "r2_buckets": [
+        { "binding": "ASSETS_BUCKET", "bucket_name": "bufo-assets-staging" },
+        { "binding": "PENDING_BUCKET", "bucket_name": "bufo-pending-staging" }
+      ],
+      "ratelimits": [
+        {
+          "name": "SUBMIT_LIMITER",
+          "namespace_id": "1001",
+          "simple": { "limit": 5, "period": 60 }
+        },
+        { "name": "REPORT_LIMITER", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } }
+      ]
+    },
+    "production": {
+      "name": "bufo-club",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "CDN_BASE": "https://cdn.bufo.club",
+        // From `terraform output worker_vars` after the first apply.
+        "ACCESS_TEAM_DOMAIN": "zuo-studios.cloudflareaccess.com",
+        "ACCESS_AUD": "ca805d0c66d098155b56c9c74f35e9bf390814f160299dbf2a400fcdc696261e",
+        "ADMIN_EMAILS": "chrisjhchung@gmail.com",
+        "DEV_ADMIN_EMAIL": ""
+      },
+      "assets": {
+        "directory": "../web/dist",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "bufo-db",
+          "database_id": "95410e94-3bec-4dd6-9e06-2cc605ec7ec7",
+          "migrations_dir": "../../db/migrations"
+        }
+      ],
+      "r2_buckets": [
+        { "binding": "ASSETS_BUCKET", "bucket_name": "bufo-assets" },
+        { "binding": "PENDING_BUCKET", "bucket_name": "bufo-pending" }
+      ],
+      "ratelimits": [
+        {
+          "name": "SUBMIT_LIMITER",
+          "namespace_id": "1001",
+          "simple": { "limit": 5, "period": 60 }
+        },
+        { "name": "REPORT_LIMITER", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } }
+      ]
+    }
+  }
+}

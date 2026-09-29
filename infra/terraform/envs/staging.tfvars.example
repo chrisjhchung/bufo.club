@@ -1,0 +1,7 @@
+account_id           = "your-cloudflare-account-id"
+zone_id              = "your-zone-id"
+zone_name            = "bufo.club"
+environment          = "staging"
+admin_emails         = ["you@example.com"]
+zero_trust_team_name = "your-cloudflare-one-team-name"
+r2_location          = "WEUR"

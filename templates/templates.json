@@ -1,0 +1,86 @@
+[
+  {
+    "slug": "bufo-thinks-about",
+    "name": "Bufo thinks about \u2026",
+    "namePattern": ":bufo-thinks-about-{subject}:",
+    "base": "bufo-thinks-about.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 128,
+      "h": 128
+    },
+    "slot": {
+      "x": 68,
+      "y": 12,
+      "w": 50,
+      "h": 40,
+      "rotate": 0,
+      "fit": "contain"
+    },
+    "sortOrder": 10,
+    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/bufo-thinks-about-azure.png"
+  },
+  {
+    "slug": "old-bufo-yells-at",
+    "name": "Old bufo yells at \u2026",
+    "namePattern": ":old-bufo-yells-at-{subject}:",
+    "base": "old-bufo-yells-at.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 128,
+      "h": 128
+    },
+    "slot": {
+      "x": 8,
+      "y": 8,
+      "w": 56,
+      "h": 52,
+      "rotate": 0,
+      "fit": "contain"
+    },
+    "sortOrder": 20,
+    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/old-bufo-yells-at-hubble.png"
+  },
+  {
+    "slug": "bufo-takes",
+    "name": "Bufo takes \u2026",
+    "namePattern": ":bufo-takes-{subject}:",
+    "base": "bufo-takes.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 128,
+      "h": 128
+    },
+    "slot": {
+      "x": 14,
+      "y": 49,
+      "w": 48,
+      "h": 48,
+      "rotate": 0,
+      "fit": "cover"
+    },
+    "sortOrder": 30,
+    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/bufo-takes-croissant.png"
+  },
+  {
+    "slug": "bufo-offers",
+    "name": "Bufo offers \u2026",
+    "namePattern": ":bufo-offers-{subject}:",
+    "base": "bufo-offers.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 128,
+      "h": 128
+    },
+    "slot": {
+      "x": 5,
+      "y": 46,
+      "w": 73,
+      "h": 67,
+      "rotate": 0,
+      "fit": "cover"
+    },
+    "sortOrder": 40,
+    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/bufo-offers-a-bagel.png"
+  }
+]
