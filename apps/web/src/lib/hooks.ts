@@ -55,3 +55,24 @@ export function useOnVisible(onVisible: () => void, enabled = true) {
 
   return ref
 }
+
+/**
+ * Keep the document title and description in step with client-side navigation.
+ * The Worker already serves correct metadata on first load for the routes that
+ * matter to crawlers; this covers everything after that, so a link shared from
+ * a page reached in-app is still described correctly.
+ */
+export function useDocumentMeta(title: string, description?: string) {
+  useEffect(() => {
+    document.title = title
+    if (!description) return
+
+    const tag = document.querySelector('meta[name="description"]')
+    const previous = tag?.getAttribute('content')
+    tag?.setAttribute('content', description)
+
+    return () => {
+      if (tag && previous) tag.setAttribute('content', previous)
+    }
+  }, [title, description])
+}

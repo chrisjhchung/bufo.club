@@ -19,6 +19,7 @@ export default defineWorkersConfig(async () => {
               TEST_MIGRATIONS: migrations,
               ENVIRONMENT: 'dev',
               CDN_BASE: 'https://cdn.test',
+              SITE_ORIGIN: 'https://bufo.club',
               ACCESS_TEAM_DOMAIN: 'bufo.cloudflareaccess.com',
               ACCESS_AUD: 'test-aud',
               ADMIN_EMAILS: 'admin@bufo.club',

@@ -21,9 +21,11 @@ import { fileURLToPath } from 'node:url'
 import {
   type BufoExt,
   buildManifestDocument,
+  detectMosaics,
   isBufoExt,
   type ManifestBufoInput,
   type ManifestTemplate,
+  type MosaicOrientation,
   R2_KEYS,
   readImageInfo,
   slugify,
@@ -64,8 +66,7 @@ function parseArgs(argv: string[]): Options {
     else if (arg === '--manifest-only') {
       options.manifestOnly = true
       options.forceManifest = true
-    }
-    else if (arg === '--limit') options.limit = Number(argv[++i])
+    } else if (arg === '--limit') options.limit = Number(argv[++i])
     else if (arg === '--env') options.env = argv[++i]
   }
   if (!options.remote && options.limit === Number.POSITIVE_INFINITY) {
@@ -258,13 +259,23 @@ function loadTemplates(): {
   }[]
 
   const files: { key: string; path: string }[] = []
+
+  // Plate art is tuned repeatedly under the same slug, so the key carries a
+  // hash of the bytes. New art lands on a new URL and no cache can serve the
+  // previous picture - which is otherwise invisible until someone complains
+  // that the template still shows the old object.
+  const version = (path: string) =>
+    createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 8)
+
   const templates = raw.map((entry) => {
-    const baseKey = R2_KEYS.template(entry.slug, 'base')
-    files.push({ key: baseKey, path: join(dir, entry.base) })
+    const basePath = join(dir, entry.base)
+    const baseKey = R2_KEYS.template(entry.slug, 'base', version(basePath))
+    files.push({ key: baseKey, path: basePath })
     let overlayKey: string | undefined
     if (entry.overlay) {
-      overlayKey = R2_KEYS.template(entry.slug, 'overlay')
-      files.push({ key: overlayKey, path: join(dir, entry.overlay) })
+      const overlayPath = join(dir, entry.overlay)
+      overlayKey = R2_KEYS.template(entry.slug, 'overlay', version(overlayPath))
+      files.push({ key: overlayKey, path: overlayPath })
     }
     return {
       slug: entry.slug,
@@ -387,6 +398,39 @@ async function manifestExists(
   return response.ok
 }
 
+/**
+ * Tile naming is ambiguous — `name-a-b` is row-column in one mosaic and
+ * column-row in another — so the orientation lives in D1 and travels with the
+ * manifest. Anything unrecorded is treated as row-column.
+ */
+function readOrientations(
+  wranglerEnv: string | undefined,
+  options: Options,
+): Record<string, MosaicOrientation> {
+  const args = [
+    'd1',
+    'execute',
+    options.env ? `bufo-db-${options.env}` : 'bufo-db',
+    '--yes',
+    '--json',
+  ]
+  args.push(options.remote ? '--remote' : '--local')
+  if (wranglerEnv) args.push('--env', wranglerEnv)
+  args.push('--command', 'SELECT base, orientation FROM mosaic_layouts')
+
+  try {
+    const output = wrangler(args)
+    const json = output.slice(output.indexOf('['))
+    const [first] = JSON.parse(json) as {
+      results: { base: string; orientation: MosaicOrientation }[]
+    }[]
+    return Object.fromEntries((first?.results ?? []).map((row) => [row.base, row.orientation]))
+  } catch {
+    // A fresh database has no layouts table yet; row-col is the safe default.
+    return {}
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2))
 
@@ -404,7 +448,15 @@ async function main() {
   const { templates, files } = loadTemplates()
   console.log(`found ${candidates.length} bufos and ${templates.length} templates`)
 
-  const manifest = buildManifestDocument(candidates, templates)
+  const manifest = buildManifestDocument(
+    candidates,
+    templates,
+    undefined,
+    detectMosaics(
+      candidates.map((bufo) => bufo.slug),
+      readOrientations(wranglerEnv, options),
+    ),
+  )
 
   const uploads = [
     ...(options.manifestOnly
@@ -419,7 +471,7 @@ async function main() {
       key: file.key,
       body: new Uint8Array(readFileSync(file.path)),
       contentType: MIME.png!,
-      cacheControl: 'public, max-age=300',
+      cacheControl: 'public, max-age=31536000, immutable',
     })),
   ]
 

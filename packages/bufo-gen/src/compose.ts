@@ -10,6 +10,16 @@ import { IDENTITY_TRANSFORM } from './types'
 const DEG = Math.PI / 180
 
 /**
+ * Emoji are square; plates are whatever shape the art happened to be. The
+ * output is the longest edge of the plate, with the plate centred inside it,
+ * so slot coordinates stay in plate space and nothing has to be re-measured.
+ */
+export function squareFrame(canvas: { w: number; h: number }) {
+  const size = Math.max(canvas.w, canvas.h)
+  return { size, offsetX: (size - canvas.w) / 2, offsetY: (size - canvas.h) / 2 }
+}
+
+/**
  * Size the subject so it fills the slot per the slot's fit mode, before the
  * user's own scale multiplier is applied.
  */
@@ -53,23 +63,42 @@ export function drawComposite(
   transform: SubjectTransform = IDENTITY_TRANSFORM,
 ): void {
   const { canvas, slot } = template
-  ctx.clearRect(0, 0, canvas.w, canvas.h)
+  const frame = squareFrame(canvas)
+  ctx.clearRect(0, 0, frame.size, frame.size)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(layers.base, 0, 0, canvas.w, canvas.h)
 
-  const rect = subjectRect(slot, layers.subject, transform)
+  // Everything below works in plate coordinates; this centres them in the square.
   ctx.save()
-  if (transform.clip) {
-    ctx.beginPath()
-    ctx.rect(slot.x, slot.y, slot.w, slot.h)
-    ctx.clip()
+  ctx.translate(frame.offsetX, frame.offsetY)
+
+  const drawBase = () => ctx.drawImage(layers.base, 0, 0, canvas.w, canvas.h)
+
+  const drawSubject = () => {
+    const rect = subjectRect(slot, layers.subject, transform)
+    ctx.save()
+    if (transform.clip) {
+      ctx.beginPath()
+      ctx.rect(slot.x, slot.y, slot.w, slot.h)
+      ctx.clip()
+    }
+    ctx.translate(rect.cx, rect.cy)
+    ctx.rotate((slot.rotate + transform.rotate) * DEG)
+    if (transform.flipX) ctx.scale(-1, 1)
+    ctx.drawImage(layers.subject, -rect.width / 2, -rect.height / 2, rect.width, rect.height)
+    ctx.restore()
   }
-  ctx.translate(rect.cx, rect.cy)
-  ctx.rotate((slot.rotate + transform.rotate) * DEG)
-  if (transform.flipX) ctx.scale(-1, 1)
-  ctx.drawImage(layers.subject, -rect.width / 2, -rect.height / 2, rect.width, rect.height)
-  ctx.restore()
+
+  // A `behind` slot puts the subject under the plate, so bufo occludes it.
+  if (slot.behind) {
+    drawSubject()
+    drawBase()
+  } else {
+    drawBase()
+    drawSubject()
+  }
 
   if (layers.overlay) ctx.drawImage(layers.overlay, 0, 0, canvas.w, canvas.h)
+
+  ctx.restore()
 }

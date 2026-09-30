@@ -14,10 +14,22 @@ export function downloadBlob(blob: Blob, filename: string): void {
  * Download images through fetch rather than a bare <a download>: the images
  * live on the R2 custom domain, and a cross-origin anchor would navigate to
  * the file instead of saving it.
+ *
+ * `cache: 'reload'` is deliberate. Images are displayed as ordinary <img>
+ * loads, which cache a response carrying no Access-Control-Allow-Origin; a
+ * CORS fetch of the same URL would reuse that entry and fail the check without
+ * ever reaching the network. Forcing a fresh request keeps the two apart.
  */
 export async function fetchBlob(url: string): Promise<Blob> {
-  const response = await fetch(url, { mode: 'cors' })
-  if (!response.ok) throw new Error(`could not fetch ${url} (${response.status})`)
+  let response: Response
+  try {
+    response = await fetch(url, { mode: 'cors', cache: 'reload' })
+  } catch {
+    // fetch() rejects with a bare TypeError for both a dead network and a
+    // CORS refusal, and "Failed to fetch" tells nobody anything.
+    throw new Error('could not reach the image server — check your connection and retry')
+  }
+  if (!response.ok) throw new Error(`the image server returned ${response.status}`)
   return response.blob()
 }
 

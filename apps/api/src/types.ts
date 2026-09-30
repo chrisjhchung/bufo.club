@@ -4,6 +4,8 @@ export type RateLimiter = {
 
 export type Env = {
   DB: D1Database
+  /** The static asset store, read so pages can be served with real metadata. */
+  ASSETS: Fetcher
   ASSETS_BUCKET: R2Bucket
   PENDING_BUCKET: R2Bucket
   SUBMIT_LIMITER: RateLimiter
@@ -12,6 +14,8 @@ export type Env = {
   ENVIRONMENT: 'dev' | 'test' | 'staging' | 'production'
   /** Public origin serving the assets bucket, e.g. https://cdn.bufo.club */
   CDN_BASE: string
+  /** Canonical site origin, used for canonical URLs and the sitemap. */
+  SITE_ORIGIN: string
   /** <team>.cloudflareaccess.com */
   ACCESS_TEAM_DOMAIN: string
   /** Audience tag of the Access application protecting /admin */

@@ -14,6 +14,7 @@ import { Turnstile } from '../components/Turnstile'
 import { VariantCanvas } from '../components/VariantCanvas'
 import { ApiError, submitBufo } from '../lib/api'
 import { downloadBlob } from '../lib/files'
+import { useDocumentMeta } from '../lib/hooks'
 import { useManifest } from '../lib/manifest'
 import { layersFor, useTemplateArt } from '../lib/templates'
 
@@ -21,6 +22,11 @@ export function Make() {
   const { templates, loading } = useManifest()
   const { art, error: artError } = useTemplateArt(templates)
   const { show } = useToast()
+
+  useDocumentMeta(
+    'Make a bufo — Bufo Club',
+    'Turn any picture into bufo emoji variants in your browser. Nothing is uploaded unless you submit it.',
+  )
 
   const [subject, setSubject] = useState<ImageBitmap | null>(null)
   const [subjectName, setSubjectName] = useState('')
@@ -194,16 +200,22 @@ export function Make() {
 
       {templates.length > 0 && (
         <>
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
             {templates.map((template) => {
               const layers = layersFor(art, template, subject)
+              const name = subject
+                ? `:${variantSlug(template, subjectName)}:`
+                : template.namePattern
+              const isSelected = selected === template.slug
               return (
                 <button
                   key={template.slug}
                   type="button"
                   disabled={!subject}
+                  // The names are long; the full one is always one hover away.
+                  title={name}
                   onClick={() => setSelected(template.slug)}
-                  className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition ${
+                  className={`flex flex-col items-center justify-between gap-2 rounded-xl border p-3 transition ${
                     selected === template.slug ? 'border-accent bg-sunk' : 'border-line'
                   } ${subject ? 'hover:border-accent' : 'cursor-default'}`}
                 >
@@ -212,13 +224,16 @@ export function Make() {
                       template={template}
                       layers={layers}
                       transform={transformFor(template.slug)}
-                      size={128}
                     />
                   ) : (
-                    <TemplatePlate template={template} size={128} />
+                    <TemplatePlate template={template} />
                   )}
-                  <span className="max-w-32 truncate font-mono text-xs text-ink-soft">
-                    {subject ? `:${variantSlug(template, subjectName)}:` : template.namePattern}
+                  <span
+                    className={`w-full font-mono text-xs break-all ${
+                      isSelected ? 'text-ink' : 'truncate text-ink-soft'
+                    }`}
+                  >
+                    {name}
                   </span>
                 </button>
               )
@@ -246,14 +261,26 @@ export function Make() {
 
       {selectedTemplate && subject && (
         <section className="rounded-2xl border border-line p-5">
-          <h2 className="font-semibold">{selectedTemplate.name}</h2>
+          <h2 className="display text-2xl">{selectedTemplate.name}</h2>
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard
+                ?.writeText(`:${variantSlug(selectedTemplate, subjectName)}:`)
+                .then(() => show('emoji name copied'))
+                .catch(() => show('could not copy', 'error'))
+            }}
+            className="mt-1 block font-mono text-sm break-all text-ink-soft transition-colors duration-200 ease-[var(--ease-gentle)] hover:text-ink"
+            title="Copy the emoji name"
+          >
+            {`:${variantSlug(selectedTemplate, subjectName)}:`}
+          </button>
           <div className="mt-4 flex flex-wrap gap-6">
-            <div className="space-y-2">
+            <div className="w-full max-w-64 space-y-2">
               <VariantCanvas
                 template={selectedTemplate}
                 layers={layersFor(art, selectedTemplate, subject)}
                 transform={transformFor(selectedTemplate.slug)}
-                size={256}
                 onDrag={({ dx, dy }) => {
                   const current = transformFor(selectedTemplate.slug)
                   patch(selectedTemplate.slug, { dx: current.dx + dx, dy: current.dy + dy })
@@ -295,7 +322,7 @@ export function Make() {
                 />
               </label>
 
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"

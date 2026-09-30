@@ -1,10 +1,13 @@
 import {
   buildManifestDocument,
+  detectMosaics,
   type Manifest,
   type ManifestTemplate,
+  type MosaicOrientation,
   R2_KEYS,
   type TemplateSlot,
 } from '@bufo/shared'
+import { buildSitemap } from '../routes/pages'
 import type { Env } from '../types'
 import { listApprovedForManifest, listTemplates } from './db'
 import { nowSeconds } from './ids'
@@ -31,10 +34,20 @@ export function templateRowToManifest(row: {
 }
 
 export async function buildManifest(db: D1Database): Promise<Manifest> {
-  const [{ bufos, tagsByBufo }, templates] = await Promise.all([
+  const [{ bufos, tagsByBufo }, templates, layouts] = await Promise.all([
     listApprovedForManifest(db),
     listTemplates(db),
+    db.prepare('SELECT base, orientation FROM mosaic_layouts').all<{
+      base: string
+      orientation: MosaicOrientation
+    }>(),
   ])
+
+  const orientations = Object.fromEntries(layouts.results.map((row) => [row.base, row.orientation]))
+  const mosaics = detectMosaics(
+    bufos.map((bufo) => bufo.slug!),
+    orientations,
+  )
 
   return buildManifestDocument(
     bufos.map((bufo) => ({
@@ -50,6 +63,7 @@ export async function buildManifest(db: D1Database): Promise<Manifest> {
     })),
     templates.map(templateRowToManifest),
     nowSeconds(),
+    mosaics,
   )
 }
 
@@ -60,6 +74,20 @@ export async function buildManifest(db: D1Database): Promise<Manifest> {
  */
 export async function rebuildManifest(env: Env): Promise<Manifest> {
   const manifest = await buildManifest(env.DB)
+
+  // The sitemap is derived from the same set, so it is rewritten here rather
+  // than drifting behind the index.
+  const sitemap = buildSitemap(
+    manifest.bufos.map((bufo) => ({ slug: bufo.s, createdAt: bufo.d })),
+    env.SITE_ORIGIN,
+  )
+  await env.ASSETS_BUCKET.put(R2_KEYS.sitemap, sitemap, {
+    httpMetadata: {
+      contentType: 'application/xml; charset=utf-8',
+      cacheControl: 'public, max-age=3600',
+    },
+  })
+
   await env.ASSETS_BUCKET.put(R2_KEYS.manifest, JSON.stringify(manifest), {
     httpMetadata: {
       contentType: 'application/json; charset=utf-8',

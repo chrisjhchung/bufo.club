@@ -1,19 +1,34 @@
-import { bufoUrl, DOWNLOAD_SIZES, emojiCode } from '@bufo/shared'
+import {
+  bufoUrl,
+  DOWNLOAD_SIZES,
+  detectMosaics,
+  emojiCode,
+  mosaicPasteText,
+  mosaicTileSlugs,
+  parseTileSlug,
+  tilePosition,
+} from '@bufo/shared'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ReportDialog } from '../components/ReportDialog'
 import { useToast } from '../components/Toast'
 import { CDN_BASE } from '../lib/env'
 import { copyImage, copyText, downloadBlob, fetchBlob, resizeToSquare } from '../lib/files'
+import { useDocumentMeta } from '../lib/hooks'
 import { useBufo, useManifest } from '../lib/manifest'
 
 export function BufoDetailRoute() {
   const { slug } = useParams<{ slug: string }>()
-  const { loading } = useManifest()
+  const { loading, bufos, mosaics: manifestMosaics } = useManifest()
   const bufo = useBufo(slug)
   const { show } = useToast()
   const [reporting, setReporting] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  useDocumentMeta(
+    bufo ? `:${bufo.slug}: — ${bufo.title} | Bufo Club` : 'Bufo Club',
+    bufo ? `Download :${bufo.slug}:, a free bufo emoji for Slack and Discord.` : undefined,
+  )
 
   if (loading) return <p className="eyebrow py-24 text-center">loading</p>
   if (!bufo) {
@@ -28,6 +43,14 @@ export function BufoDetailRoute() {
   }
 
   const url = bufoUrl(CDN_BASE, bufo)
+
+  // A tile on its own is a fragment of a picture; the useful thing to hand
+  // someone who lands here is the block that reassembles the whole grid.
+  const tile = parseTileSlug(bufo.slug)
+  const allMosaics =
+    manifestMosaics.length > 0 ? manifestMosaics : detectMosaics(bufos.map((entry) => entry.slug))
+  const mosaic = tile ? allMosaics.find((entry) => entry.base === tile.base) : undefined
+  const position = mosaic ? tilePosition(mosaic, bufo.slug) : null
 
   async function withBusy(label: string, action: () => Promise<void>) {
     setBusy(true)
@@ -137,6 +160,11 @@ export function BufoDetailRoute() {
               Copy image
             </button>
           )}
+          {!bufo.isAnimated && !mosaic && (
+            <Link to={`/mosaic?from=${encodeURIComponent(bufo.slug)}`} className={pill}>
+              Make a mosaic
+            </Link>
+          )}
         </div>
 
         {bufo.tags.length > 0 && (
@@ -151,6 +179,48 @@ export function BufoDetailRoute() {
               </Link>
             ))}
           </div>
+        )}
+
+        {mosaic && (
+          <section className="mt-10 w-full space-y-2 rounded-2xl border border-line p-5">
+            <p className="eyebrow">
+              tile {position?.row},{position?.col} of a {mosaic.rows}×{mosaic.cols} mosaic
+            </p>
+            <div
+              className="grid w-fit gap-0.5 rounded-lg bg-sunk p-1"
+              style={{ gridTemplateColumns: `repeat(${mosaic.cols}, minmax(0, 1fr))` }}
+            >
+              {mosaicTileSlugs(mosaic).map((tileName) => {
+                const piece = bufos.find((entry) => entry.slug === tileName)
+                return piece ? (
+                  <Link key={tileName} to={`/b/${tileName}`} title={tileName}>
+                    <img
+                      src={bufoUrl(CDN_BASE, piece)}
+                      alt={tileName}
+                      className="checker size-10 rounded-sm object-contain"
+                    />
+                  </Link>
+                ) : (
+                  <div key={tileName} className="checker size-10 rounded-sm" />
+                )
+              })}
+            </div>
+            <pre className="overflow-x-auto rounded-lg border border-line bg-raise p-3 font-mono text-[11px] leading-relaxed">
+              {mosaicPasteText(mosaic)}
+            </pre>
+            <button
+              type="button"
+              onClick={() =>
+                withBusy('copy failed', async () => {
+                  await copyText(mosaicPasteText(mosaic))
+                  show('paste block copied')
+                })
+              }
+              className={pill}
+            >
+              Copy the whole mosaic
+            </button>
+          </section>
         )}
 
         {bufo.credit && <p className="eyebrow mt-8">credit · {bufo.credit}</p>}

@@ -124,6 +124,109 @@ def fill(rgba: Pixels, width: int, box: tuple[int, int, int, int], color: tuple[
             rgba[index : index + 4] = bytes(color)
 
 
+def content_bounds(rgba: Pixels, width: int, height: int, alpha_floor: int = 12):
+    """Bounding box of the non-transparent pixels."""
+    x0, y0, x1, y1 = width, height, -1, -1
+    for row in range(height):
+        for col in range(width):
+            if rgba[(row * width + col) * 4 + 3] > alpha_floor:
+                if col < x0:
+                    x0 = col
+                if row < y0:
+                    y0 = row
+                if col > x1:
+                    x1 = col
+                if row > y1:
+                    y1 = row
+    if x1 < 0:
+        return (0, 0, width, height)
+    return (x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+
+
+def squarify(
+    rgba: Pixels,
+    width: int,
+    height: int,
+    slot: dict,
+    anchor: str = "center",
+    pad: float = 0.0,
+    trim: bool = True,
+):
+    """Trim the transparent margin and lay the art into a square canvas.
+
+    Plates come in whatever shape the art was cropped to. Centring a 260x404
+    plate inside a 404 square wastes a third of the frame on empty bands, which
+    reads as "bufo is too small". Trimming first means he fills the emoji, and
+    `anchor` decides whether he sits centred or stands on the bottom edge.
+
+    The slot rectangle is carried through the same transform, so coordinates
+    measured against the original plate keep pointing at the same place.
+    """
+    bx, by, bw, bh = content_bounds(rgba, width, height) if trim else (0, 0, width, height)
+
+    # The square has to hold bufo *and* wherever the subject goes, so the frame
+    # is the union of the two. Sizing to the art alone would clip a slot that
+    # sits beside him; sizing to the whole plate leaves dead space.
+    ux0 = min(bx, slot["x"])
+    uy0 = min(by, slot["y"])
+    ux1 = max(bx + bw, slot["x"] + slot["w"])
+    uy1 = max(by + bh, slot["y"] + slot["h"])
+    uw, uh = ux1 - ux0, uy1 - uy0
+
+    size = int(round(max(uw, uh) * (1.0 + pad * 2)))
+    scale = 1.0
+
+    # Round once: rounding inside the copy loop drops or doubles whole rows
+    # whenever the offset lands on a half pixel.
+    offset_x = int(round((size - uw) / 2 - ux0))
+    if anchor == "bottom":
+        offset_y = int(round(size - uh - size * pad - uy0))
+    else:
+        offset_y = int(round((size - uh) / 2 - uy0))
+
+    out = bytearray(size * size * 4)
+    for row in range(height):
+        target_row = row + offset_y
+        if not (0 <= target_row < size):
+            continue
+        for col in range(width):
+            target_col = col + offset_x
+            if not (0 <= target_col < size):
+                continue
+            src = (row * width + col) * 4
+            if rgba[src + 3] == 0:
+                continue
+            dst = (target_row * size + target_col) * 4
+            out[dst : dst + 4] = rgba[src : src + 4]
+
+    moved = dict(slot)
+    moved["x"] = slot["x"] + offset_x
+    moved["y"] = slot["y"] + offset_y
+    moved["w"] = int(round(slot["w"] * scale))
+    moved["h"] = int(round(slot["h"] * scale))
+    return size, out, moved
+
+
+def erase_foreign(rgba: Pixels, width: int, box: tuple[int, int, int, int]) -> None:
+    """Clear everything inside `box` that is not bufo himself.
+
+    Useful where the object sits on the transparent background - a crown above
+    his head, a logo he is praying to, a sword blade - so the slot starts empty
+    instead of relying on the subject to cover the original.
+    """
+    x, y, w, h = box
+    for row in range(y, min(y + h, len(rgba) // (width * 4))):
+        for col in range(x, min(x + w, width)):
+            index = (row * width + col) * 4
+            r, g, b, a = rgba[index], rgba[index + 1], rgba[index + 2], rgba[index + 3]
+            if a == 0:
+                continue
+            green = 10 < g < 230 and g > r + 10 and g > b + 10
+            ink = r < 90 and g < 100 and b < 90
+            if not (green or ink):
+                rgba[index + 3] = 0
+
+
 def extract_hands(rgba: Pixels, width: int, height: int, box: tuple[int, int, int, int]) -> Pixels:
     """Lift bufo's hands out of an image so they can be drawn in front of the subject.
 
@@ -200,14 +303,74 @@ TEMPLATES = [
         "slug": "bufo-offers",
         "name": "Bufo offers …",
         "namePattern": ":bufo-offers-{subject}:",
-        "source": "bufo-offers-a-bagel.png",
-        # The whole "bufo offers X" family shares one base pose; diffing two of
-        # them (a bagel against a clover) gives the exact region the object
-        # occupies, which the subject then covers.
+        # Hand-prepared: an empty pose plus the arm as a separate layer, so the
+        # subject sits in his grip with the fingers drawn in front of it.
+        "file": "bufo-offers.base.png",
+        "overlayFile": "bufo-offers.overlay.png",
         "paint": [],
-        "slot": {"x": 5, "y": 46, "w": 73, "h": 67, "rotate": 0, "fit": "cover"},
+        "slot": {"x": 5, "y": 46, "w": 73, "h": 67, "rotate": 0, "fit": "contain"},
         "sortOrder": 40,
-    }
+    },
+    {
+        "slug": "bufo-wears",
+        "name": "Bufo wears …",
+        "namePattern": ":bufo-wears-{subject}:",
+        "source": "bufo-wears-a-paper-crown.png",
+        "paint": [],
+        # The crown sits on transparency above his head, so it lifts out cleanly.
+        "erase": [{"box": [50, 0, 62, 46]}],
+        "slot": {"x": 54, "y": 0, "w": 56, "h": 42, "rotate": 0, "fit": "contain"},
+        "sortOrder": 50,
+    },
+    {
+        "slug": "bufo-wields",
+        "name": "Bufo wields …",
+        "namePattern": ":bufo-wields-{subject}:",
+        "file": "bufo-wields.base.png",
+        "paint": [],
+        "square": {"anchor": "center"},
+        # The crop leaves no room beside his fist, so the slot starts off the
+        # left edge: the union sizing grows the square to fit it, giving the
+        # weapon somewhere to rise into instead of covering his face.
+        "slot": {"x": -70, "y": 28, "w": 178, "h": 188, "rotate": 0, "fit": "contain"},
+        "sortOrder": 60,
+    },
+    {
+        "slug": "bufo-prays-to",
+        "name": "Bufo prays to …",
+        "namePattern": ":bufo-prays-to-{subject}:",
+        "source": "bufo-prays-to-azure.png",
+        "paint": [],
+        "erase": [{"box": [0, 0, 60, 60]}],
+        # Behind the plate: whatever he prays to looms past his head rather
+        # than being pasted on top of it.
+        "slot": {"x": 0, "y": 0, "w": 66, "h": 60, "rotate": 0, "fit": "contain", "behind": True},
+        "sortOrder": 70,
+    },
+    {
+        "slug": "bufo-approves",
+        "name": "Bufo approves …",
+        "namePattern": ":bufo-approves-{subject}:",
+        "file": "bufo-approves.base.png",
+        "paint": [],
+        # Keep the empty right-hand side: that is where the approved thing goes.
+        # Bottom-anchored so he stands on the floor of the square.
+        "square": {"anchor": "bottom"},
+        "slot": {"x": 150, "y": 62, "w": 178, "h": 178, "rotate": 0, "fit": "contain", "behind": True},
+        "sortOrder": 80,
+    },
+    {
+        "slug": "bufo-babysits",
+        "name": "Bufo babysits …",
+        "namePattern": ":bufo-babysits-{subject}:",
+        "file": "bufo-babysits.base.png",
+        "paint": [],
+        # Trimmed so he and the pram fill the emoji instead of floating in a
+        # tall, mostly empty frame.
+        "square": {"anchor": "bottom"},
+        "slot": {"x": 22, "y": 252, "w": 118, "h": 86, "rotate": 0, "fit": "contain"},
+        "sortOrder": 90,
+    },
 ]
 
 def main() -> int:
@@ -225,17 +388,45 @@ def main() -> int:
     out_dir.mkdir(exist_ok=True)
 
     manifest = []
+    src_dir = out_dir / "src"
+
     for template in TEMPLATES:
-        source = images / template["source"]
+        # A hand-prepared plate is used as-is; a derived one is cut from the
+        # all-the-bufo original by the paint/erase ops below.
+        supplied = template.get("file")
+        source = src_dir / supplied if supplied else images / template["source"]
         width, height, rgba = decode_png(source)
 
         for patch in template.get("paint", []):
             fill(rgba, width, tuple(patch["box"]), tuple(patch["color"]))
 
+        for patch in template.get("erase", []):
+            erase_foreign(rgba, width, tuple(patch["box"]))
+
+        slot = dict(template["slot"])
+        square = template.get("square")
+        if square:
+            size, rgba, slot = squarify(
+                rgba,
+                width,
+                height,
+                slot,
+                anchor=square.get("anchor", "center"),
+                pad=square.get("pad", 0.0),
+                trim=square.get("trim", True),
+            )
+            width = height = size
+
         base_name = f"{template['slug']}.base.png"
         encode_png(out_dir / base_name, width, height, rgba)
 
         overlay_name = None
+        supplied_overlay = template.get("overlayFile")
+        if supplied_overlay:
+            ow, oh, overlay_rgba = decode_png(src_dir / supplied_overlay)
+            overlay_name = f"{template['slug']}.overlay.png"
+            encode_png(out_dir / overlay_name, ow, oh, overlay_rgba)
+
         overlay = template.get("overlay")
         if overlay:
             lifted = extract_hands(rgba, width, height, tuple(overlay["box"]))
@@ -250,9 +441,13 @@ def main() -> int:
                 "base": base_name,
                 "overlay": overlay_name,
                 "canvas": {"w": width, "h": height},
-                "slot": template["slot"],
+                "slot": slot,
                 "sortOrder": template["sortOrder"],
-                "derivedFrom": f"knobiknows/all-the-bufo:all-the-bufo/{template['source']}",
+                "derivedFrom": (
+                    f"supplied plate: templates/src/{supplied}"
+                    if supplied
+                    else f"knobiknows/all-the-bufo:all-the-bufo/{template['source']}"
+                ),
             }
         )
         print(f"{template['slug']}: {width}x{height} base={base_name} overlay={overlay_name}")

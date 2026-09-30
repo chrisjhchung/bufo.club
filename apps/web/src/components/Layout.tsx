@@ -5,6 +5,7 @@ import { useManifest } from '../lib/manifest'
 const links = [
   { to: '/', label: 'Browse' },
   { to: '/make', label: 'Make' },
+  { to: '/mosaic', label: 'Mosaic' },
   { to: '/upload', label: 'Upload' },
   { to: '/about', label: 'About' },
 ]

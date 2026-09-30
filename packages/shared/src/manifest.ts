@@ -1,4 +1,5 @@
 import type { BufoExt } from './constants'
+import type { Mosaic } from './mosaic'
 import { titleFromSlug } from './slug'
 
 /**
@@ -29,6 +30,11 @@ export type TemplateSlot = {
   /** degrees, clockwise */
   rotate: number
   fit: SlotFit
+  /**
+   * Draw the subject underneath the plate instead of on top of it. What bufo
+   * prays to belongs behind him; what he offers belongs in front.
+   */
+  behind?: boolean
 }
 
 export type ManifestTemplate = {
@@ -48,6 +54,8 @@ export type Manifest = {
   count: number
   bufos: ManifestBufoRow[]
   templates: ManifestTemplate[]
+  /** Complete tile grids, with the orientation needed to assemble them. */
+  mosaics?: Mosaic[]
 }
 
 /** The fields the manifest needs about one approved bufo. */
@@ -87,9 +95,10 @@ export function buildManifestDocument(
   bufos: ManifestBufoInput[],
   templates: ManifestTemplate[],
   generatedAt = Math.floor(Date.now() / 1000),
+  mosaics: Mosaic[] = [],
 ): Manifest {
   const rows = bufos.map(encodeBufoRow)
-  return { version: 1, generatedAt, count: rows.length, bufos: rows, templates }
+  return { version: 1, generatedAt, count: rows.length, bufos: rows, templates, mosaics }
 }
 
 /** Decoded, comfortable shape used by the UI. */
@@ -127,11 +136,13 @@ export function decodeBufo(row: ManifestBufoRow): Bufo {
 export function decodeManifest(manifest: Manifest): {
   bufos: Bufo[]
   templates: ManifestTemplate[]
+  mosaics: Mosaic[]
   generatedAt: number
 } {
   return {
     bufos: manifest.bufos.map(decodeBufo),
     templates: manifest.templates,
+    mosaics: manifest.mosaics ?? [],
     generatedAt: manifest.generatedAt,
   }
 }

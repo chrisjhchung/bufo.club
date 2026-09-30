@@ -104,6 +104,7 @@ export function Templates() {
             <img
               src={cdnUrl(CDN_BASE, row.baseKey)}
               alt={row.name}
+              crossOrigin="anonymous"
               className="checker mx-auto size-24 rounded object-contain"
             />
             <p className="truncate text-sm font-medium">{row.name}</p>

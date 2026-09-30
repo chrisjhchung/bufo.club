@@ -32,6 +32,24 @@ export const submissionMetaSchema = z.object({
 })
 export type SubmissionMeta = z.infer<typeof submissionMetaSchema>
 
+export const mosaicSubmissionSchema = z.object({
+  rows: z.coerce.number().int().min(2).max(5),
+  cols: z.coerce.number().int().min(2).max(5),
+  title: z.string().trim().min(2).max(120),
+  base: slugSchema,
+  tags: z.string().max(240).optional(),
+  note: z.string().trim().max(500).optional(),
+  contact: z.string().trim().max(120).optional(),
+  credit: z.string().trim().max(120).optional(),
+  turnstileToken: z.string().min(1, 'captcha required').max(2048),
+})
+
+export const mosaicApproveSchema = z.object({
+  base: slugSchema,
+  title: z.string().trim().min(2).max(120),
+  tags: tagsSchema.default([]),
+})
+
 export const approveSchema = z.object({
   slug: slugSchema,
   title: z.string().trim().min(2).max(120),
@@ -57,6 +75,7 @@ export const slotSchema = z.object({
   h: z.number().int().min(1).max(4096),
   rotate: z.number().min(-180).max(180).default(0),
   fit: z.enum(['contain', 'cover']).default('contain'),
+  behind: z.boolean().default(false),
 })
 
 export const templateUpsertSchema = z.object({

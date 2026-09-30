@@ -20,6 +20,14 @@ export function BufoCard({ bufo, index = 0 }: { bufo: Bufo; index?: number }) {
           decoding="async"
           width={64}
           height={64}
+          // One retry with a cache-buster: an image that failed for a transient
+          // reason should not leave a broken icon on the page forever.
+          onError={(event) => {
+            const img = event.currentTarget
+            if (img.dataset.retried) return
+            img.dataset.retried = '1'
+            img.src = `${bufoUrl(CDN_BASE, bufo)}?retry=1`
+          }}
           className="max-h-16 max-w-16 object-contain transition-transform duration-300 ease-[var(--ease-settle)] group-hover:scale-110"
         />
       </div>

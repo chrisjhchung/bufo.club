@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { adminRoutes } from './routes/admin'
+import { pageRoutes } from './routes/pages'
 import { publicRoutes } from './routes/public'
 import type { AppBindings } from './types'
 
@@ -13,6 +14,10 @@ const app = new Hono<AppBindings>()
  */
 app.route('/api/admin', adminRoutes)
 app.route('/api', publicRoutes)
+
+// Crawler-facing routes: per-bufo pages rendered with real metadata, plus
+// robots.txt, sitemap.xml and llms.txt. Everything else is a static asset.
+app.route('/', pageRoutes)
 
 app.notFound((c) => c.json({ error: `no route for ${c.req.method} ${c.req.path}` }, 404))
 

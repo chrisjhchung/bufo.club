@@ -3,6 +3,11 @@ import { newId, nowSeconds } from './ids'
 
 export type BufoRow = {
   id: string
+  mosaic_id?: string | null
+  mosaic_rows?: number | null
+  mosaic_cols?: number | null
+  mosaic_row?: number | null
+  mosaic_col?: number | null
   slug: string | null
   title: string
   ext: BufoExt
@@ -58,6 +63,14 @@ export async function getApprovedBufoBySlug(db: D1Database, slug: string) {
     .first<BufoRow>()
 }
 
+export type MosaicPlacement = {
+  mosaicId: string
+  rows: number
+  cols: number
+  row: number
+  col: number
+}
+
 export type NewBufo = {
   id: string
   title: string
@@ -75,6 +88,7 @@ export type NewBufo = {
   credit?: string | null
   note?: string | null
   contact?: string | null
+  mosaic?: MosaicPlacement | null
 }
 
 export async function insertBufo(db: D1Database, bufo: NewBufo): Promise<void> {
@@ -82,8 +96,10 @@ export async function insertBufo(db: D1Database, bufo: NewBufo): Promise<void> {
     .prepare(
       `INSERT INTO bufos (id, slug, title, ext, r2_key, width, height, bytes, sha256,
                           is_animated, status, source, source_url, credit,
-                          submitter_note, submitter_contact, created_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`,
+                          submitter_note, submitter_contact, created_at,
+                          mosaic_id, mosaic_rows, mosaic_cols, mosaic_row, mosaic_col)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
+               ?18, ?19, ?20, ?21, ?22)`,
     )
     .bind(
       bufo.id,
@@ -103,8 +119,21 @@ export async function insertBufo(db: D1Database, bufo: NewBufo): Promise<void> {
       bufo.note ?? null,
       bufo.contact ?? null,
       nowSeconds(),
+      bufo.mosaic?.mosaicId ?? null,
+      bufo.mosaic?.rows ?? null,
+      bufo.mosaic?.cols ?? null,
+      bufo.mosaic?.row ?? null,
+      bufo.mosaic?.col ?? null,
     )
     .run()
+}
+
+export async function listMosaicTiles(db: D1Database, mosaicId: string) {
+  const { results } = await db
+    .prepare('SELECT * FROM bufos WHERE mosaic_id = ?1 ORDER BY mosaic_row ASC, mosaic_col ASC')
+    .bind(mosaicId)
+    .all<BufoRow>()
+  return results
 }
 
 export async function listPendingBufos(db: D1Database, limit = 60) {

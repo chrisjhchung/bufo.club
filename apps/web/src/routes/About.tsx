@@ -1,4 +1,11 @@
+import { useDocumentMeta } from '../lib/hooks'
+
 export function About() {
+  useDocumentMeta(
+    'About — Bufo Club',
+    'Where the bufos come from, how uploads are reviewed, and how to ask for one to be taken down.',
+  )
+
   return (
     <div className="prose-sm mx-auto max-w-2xl space-y-6">
       <section>

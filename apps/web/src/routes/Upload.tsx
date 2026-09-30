@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast'
 import { Turnstile } from '../components/Turnstile'
 import { ApiError, submitBufo } from '../lib/api'
 import { formatBytes } from '../lib/files'
+import { useDocumentMeta } from '../lib/hooks'
 
 type Preview = { url: string; file: File; width: number; height: number; animated: boolean }
 
@@ -19,6 +20,11 @@ export function Upload() {
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
   const { show } = useToast()
+
+  useDocumentMeta(
+    'Upload a bufo — Bufo Club',
+    'Submit a bufo emoji to the library. Uploads are anonymous and reviewed before they appear.',
+  )
 
   async function accept(file: File | null | undefined) {
     if (!file) return

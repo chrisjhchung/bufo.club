@@ -3,13 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Bufo Club</title>
-    <meta name="description" content="Search, download and make bufo emoji. Free, open, and full of frogs." />
-    <meta property="og:title" content="Bufo Club" />
-    <meta property="og:description" content="Search, download and make bufo emoji." />
+    <title>Bufo Club — search and download every bufo emoji</title>
+    <meta
+      name="description"
+      content="Search thousands of bufo emoji and download them free for Slack and Discord. Make your own bufo variants from any picture — no account needed."
+    />
+    <link rel="canonical" href="https://bufo.club/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
     <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#0b1a12" />
+    <meta property="og:site_name" content="Bufo Club" />
+    <meta property="og:title" content="Bufo Club — every bufo, one search box" />
+    <meta
+      property="og:description"
+      content="Search thousands of bufo emoji and download them free for Slack and Discord."
+    />
+    <meta property="og:url" content="https://bufo.club/" />
+    <meta property="og:image" content="https://cdn.bufo.club/b/bufo-party.gif" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Bufo Club — every bufo, one search box" />
+    <meta
+      name="twitter:description"
+      content="Search thousands of bufo emoji and download them free for Slack and Discord."
+    />
+
+    <meta name="theme-color" content="#f5f2ea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1210" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.gif" type="image/gif" />
+    <link rel="preconnect" href="https://cdn.bufo.club" crossorigin />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://bufo.club/#website",
+            "url": "https://bufo.club/",
+            "name": "Bufo Club",
+            "description": "A searchable library of bufo emoji, free to download for Slack and Discord.",
+            "inLanguage": "en",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://bufo.club/?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "CollectionPage",
+            "@id": "https://bufo.club/#collection",
+            "url": "https://bufo.club/",
+            "name": "Bufo Club — the bufo emoji library",
+            "isPartOf": { "@id": "https://bufo.club/#website" },
+            "about": {
+              "@type": "Thing",
+              "name": "Bufo emoji",
+              "description": "Bufo, also known as Froge or Concerned Frog, is a set of frog emoji used in Slack and Discord."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

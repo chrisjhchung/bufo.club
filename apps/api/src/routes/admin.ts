@@ -2,10 +2,13 @@ import {
   approveSchema,
   cdnUrl,
   MAX_UPLOAD_BYTES,
+  mosaicApproveSchema,
   R2_KEYS,
   readImageInfo,
   rejectSchema,
+  sha256Hex,
   templateUpsertSchema,
+  tileSlug,
 } from '@bufo/shared'
 import { Hono } from 'hono'
 import {
@@ -14,6 +17,7 @@ import {
   deleteTemplate,
   getBufoById,
   listAudit,
+  listMosaicTiles,
   listOpenReports,
   listPendingBufos,
   listTemplates,
@@ -40,8 +44,36 @@ adminRoutes.get('/me', (c) => c.json({ email: c.get('adminEmail') }))
 
 adminRoutes.get('/queue', async (c) => {
   const [pending, counts] = await Promise.all([listPendingBufos(c.env.DB), countByStatus(c.env.DB)])
+  const mosaics = new Map<
+    string,
+    {
+      mosaicId: string
+      rows: number
+      cols: number
+      title: string
+      tiles: number
+      createdAt: number
+    }
+  >()
+  for (const bufo of pending) {
+    if (!bufo.mosaic_id) continue
+    const existing = mosaics.get(bufo.mosaic_id)
+    if (existing) existing.tiles++
+    else
+      mosaics.set(bufo.mosaic_id, {
+        mosaicId: bufo.mosaic_id,
+        rows: bufo.mosaic_rows ?? 0,
+        cols: bufo.mosaic_cols ?? 0,
+        // Tile titles carry a "(row,col)" suffix; the set's name is the stem.
+        title: bufo.title.replace(/\s*\(\d+,\d+\)$/, ''),
+        tiles: 1,
+        createdAt: bufo.created_at,
+      })
+  }
+
   return c.json({
     counts,
+    mosaics: [...mosaics.values()],
     pending: pending.map((bufo) => ({
       id: bufo.id,
       title: bufo.title,
@@ -56,6 +88,9 @@ adminRoutes.get('/queue', async (c) => {
       contact: bufo.submitter_contact,
       createdAt: bufo.created_at,
       previewUrl: `/api/admin/pending/${bufo.id}`,
+      mosaicId: bufo.mosaic_id ?? null,
+      mosaicRow: bufo.mosaic_row ?? null,
+      mosaicCol: bufo.mosaic_col ?? null,
     })),
   })
 })
@@ -165,6 +200,81 @@ adminRoutes.delete('/bufos/:id', async (c) => {
   return c.json({ ok: true })
 })
 
+/**
+ * Approve a mosaic as one unit.
+ *
+ * Tiles are meaningless alone — approving fifteen of sixteen leaves a hole that
+ * only shows up when someone pastes the grid — so the slugs are assigned from
+ * the stored row/column rather than typed, and the manifest is rebuilt once at
+ * the end instead of per tile.
+ */
+adminRoutes.post('/mosaics/:mosaicId/approve', async (c) => {
+  const mosaicId = c.req.param('mosaicId')
+  const tiles = await listMosaicTiles(c.env.DB, mosaicId)
+  if (tiles.length === 0) notFound('no such mosaic')
+
+  const parsed = mosaicApproveSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) {
+    badRequest(
+      'invalid approval',
+      parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+    )
+  }
+
+  const { base, title, tags } = parsed.data
+
+  // Check every slug is free before moving a single object.
+  for (const tile of tiles) {
+    const slug = tileSlug(base, tile.mosaic_row ?? 0, tile.mosaic_col ?? 0)
+    const clash = await c.env.DB.prepare('SELECT id FROM bufos WHERE slug = ?1 AND id IS NOT ?2')
+      .bind(slug, tile.id)
+      .first<{ id: string }>()
+    if (clash) conflict(`:${slug}: is taken`)
+  }
+
+  const approved: string[] = []
+  for (const tile of tiles) {
+    if (tile.status === 'approved') continue
+    const row = tile.mosaic_row ?? 0
+    const col = tile.mosaic_col ?? 0
+    const slug = tileSlug(base, row, col)
+    const targetKey = R2_KEYS.bufo(slug, tile.ext)
+
+    const moved = await moveObject(
+      c.env.PENDING_BUCKET,
+      tile.r2_key,
+      c.env.ASSETS_BUCKET,
+      targetKey,
+      {
+        ...(await pendingMetadata(c.env.PENDING_BUCKET, tile.r2_key)),
+        cacheControl: IMMUTABLE_CACHE,
+      },
+    )
+    if (!moved) notFound(`tile ${row}-${col} is missing from storage`)
+
+    await markApproved(c.env.DB, {
+      id: tile.id,
+      slug,
+      title: `${title} (${row},${col})`,
+      r2Key: targetKey,
+      credit: tile.credit,
+      reviewer: c.get('adminEmail'),
+    })
+    await setTags(c.env.DB, tile.id, [...tags, 'mosaic'])
+    approved.push(slug)
+  }
+
+  await writeAudit(c.env.DB, {
+    actor: c.get('adminEmail'),
+    action: 'mosaic.approve',
+    targetId: mosaicId,
+    meta: { base, tiles: approved.length },
+  })
+
+  const manifest = await rebuildManifest(c.env)
+  return c.json({ base, tiles: approved.length, manifestCount: manifest.count })
+})
+
 adminRoutes.post('/rebuild-manifest', async (c) => {
   const manifest = await rebuildManifest(c.env)
   await writeAudit(c.env.DB, {
@@ -242,9 +352,11 @@ adminRoutes.post('/templates', async (c) => {
 
 adminRoutes.delete('/templates/:slug', async (c) => {
   const slug = c.req.param('slug')
+  // Plate keys are content-hashed, so the row is the only record of them.
+  const existing = (await listTemplates(c.env.DB, true)).find((row) => row.slug === slug)
   await deleteTemplate(c.env.DB, slug)
-  await c.env.ASSETS_BUCKET.delete(R2_KEYS.template(slug, 'base'))
-  await c.env.ASSETS_BUCKET.delete(R2_KEYS.template(slug, 'overlay'))
+  if (existing?.base_key) await c.env.ASSETS_BUCKET.delete(existing.base_key)
+  if (existing?.overlay_key) await c.env.ASSETS_BUCKET.delete(existing.overlay_key)
   await writeAudit(c.env.DB, {
     actor: c.get('adminEmail'),
     action: 'template.delete',
@@ -291,10 +403,12 @@ async function storeLayer(
   const info = readImageInfo(bytes)
   if (info?.ext !== 'png') badRequest(`${layer} layer must be a PNG`)
 
-  const key = R2_KEYS.template(slug, layer)
+  // Hash the bytes into the key so re-tuned art lands on a fresh URL; the old
+  // object stays cached under its own key and is simply no longer referenced.
+  const version = (await sha256Hex(bytes)).slice(0, 8)
+  const key = R2_KEYS.template(slug, layer, version)
   await putImage(c.env.ASSETS_BUCKET, key, bytes.buffer as ArrayBuffer, 'png', {
-    // Template art is replaced in place, so it cannot be immutable.
-    cacheControl: 'public, max-age=300',
+    cacheControl: 'public, max-age=31536000, immutable',
   })
   return key
 }

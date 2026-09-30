@@ -1,5 +1,6 @@
 export * from './constants'
 export * from './image'
 export * from './manifest'
+export * from './mosaic'
 export * from './schemas'
 export * from './slug'

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { drawComposite, fitSubject, subjectRect } from '../compose'
+import * as canvasModule from '../canvas'
+import { drawComposite, fitSubject, squareFrame, subjectRect } from '../compose'
+import { composeMosaicSheet } from '../mosaic'
 import { renderTemplateName, variantSlug } from '../naming'
 import type { ManifestTemplate } from '../types'
 import { IDENTITY_TRANSFORM } from '../types'
@@ -117,5 +119,52 @@ describe('naming', () => {
     expect(renderTemplateName(template, 'A Flower')).toBe(':bufo-offers-a-flower:')
     expect(renderTemplateName(template, '!!!')).toBe(':bufo-offers-thing:')
     expect(variantSlug(template, 'A Flower')).toBe('bufo-offers-a-flower')
+  })
+})
+
+describe('squareFrame', () => {
+  it('leaves a square plate alone', () => {
+    expect(squareFrame({ w: 128, h: 128 })).toEqual({ size: 128, offsetX: 0, offsetY: 0 })
+  })
+
+  it('centres a wide plate in a square of its longest edge', () => {
+    expect(squareFrame({ w: 404, h: 264 })).toEqual({ size: 404, offsetX: 0, offsetY: 70 })
+  })
+
+  it('centres a tall plate', () => {
+    expect(squareFrame({ w: 260, h: 404 })).toEqual({ size: 404, offsetX: 72, offsetY: 0 })
+  })
+})
+
+describe('drawComposite on a non-square plate', () => {
+  it('clears the full square and offsets the plate into it', () => {
+    const ctx = fakeCtx()
+    const wide: ManifestTemplate = { ...template, canvas: { w: 404, h: 264 } }
+    drawComposite(ctx as unknown as CanvasRenderingContext2D, wide, layers())
+    // The square is 404 on a side, not the plate's 264 height.
+    expect(ctx.clearRect).toHaveBeenCalledWith(0, 0, 404, 404)
+    expect(ctx.translate).toHaveBeenCalledWith(0, 70)
+    expect(ctx.restore).toHaveBeenCalled()
+  })
+})
+
+describe('composeMosaicSheet', () => {
+  const fakeCanvasCtx = () => ({
+    imageSmoothingEnabled: false,
+    imageSmoothingQuality: 'low',
+    drawImage: vi.fn(),
+  })
+
+  it('lays the picture across the whole grid, contained and centred', () => {
+    const ctx = fakeCanvasCtx()
+    const canvas = { getContext: () => ctx } as unknown as OffscreenCanvas
+    vi.spyOn(canvasModule, 'createCanvas').mockReturnValue(canvas)
+
+    composeMosaicSheet({ width: 256, height: 128 } as never, { rows: 2, cols: 2 })
+
+    // Grid is 256x256; a 2:1 picture fits the width and centres vertically.
+    const [, x, y, w, h] = ctx.drawImage.mock.calls[0]!
+    expect([x, y, w, h]).toEqual([0, 64, 256, 128])
+    vi.restoreAllMocks()
   })
 })

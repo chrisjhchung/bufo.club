@@ -67,7 +67,7 @@
     "name": "Bufo offers \u2026",
     "namePattern": ":bufo-offers-{subject}:",
     "base": "bufo-offers.base.png",
-    "overlay": null,
+    "overlay": "bufo-offers.overlay.png",
     "canvas": {
       "w": 128,
       "h": 128
@@ -78,9 +78,116 @@
       "w": 73,
       "h": 67,
       "rotate": 0,
-      "fit": "cover"
+      "fit": "contain"
     },
     "sortOrder": 40,
-    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/bufo-offers-a-bagel.png"
+    "derivedFrom": "supplied plate: templates/src/bufo-offers.base.png"
+  },
+  {
+    "slug": "bufo-wears",
+    "name": "Bufo wears \u2026",
+    "namePattern": ":bufo-wears-{subject}:",
+    "base": "bufo-wears.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 112,
+      "h": 112
+    },
+    "slot": {
+      "x": 54,
+      "y": 0,
+      "w": 56,
+      "h": 42,
+      "rotate": 0,
+      "fit": "contain"
+    },
+    "sortOrder": 50,
+    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/bufo-wears-a-paper-crown.png"
+  },
+  {
+    "slug": "bufo-wields",
+    "name": "Bufo wields \u2026",
+    "namePattern": ":bufo-wields-{subject}:",
+    "base": "bufo-wields.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 328,
+      "h": 328
+    },
+    "slot": {
+      "x": 0,
+      "y": 62,
+      "w": 178,
+      "h": 188,
+      "rotate": 0,
+      "fit": "contain"
+    },
+    "sortOrder": 60,
+    "derivedFrom": "supplied plate: templates/src/bufo-wields.base.png"
+  },
+  {
+    "slug": "bufo-prays-to",
+    "name": "Bufo prays to \u2026",
+    "namePattern": ":bufo-prays-to-{subject}:",
+    "base": "bufo-prays-to.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 128,
+      "h": 128
+    },
+    "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 66,
+      "h": 60,
+      "rotate": 0,
+      "fit": "contain",
+      "behind": true
+    },
+    "sortOrder": 70,
+    "derivedFrom": "knobiknows/all-the-bufo:all-the-bufo/bufo-prays-to-azure.png"
+  },
+  {
+    "slug": "bufo-approves",
+    "name": "Bufo approves \u2026",
+    "namePattern": ":bufo-approves-{subject}:",
+    "base": "bufo-approves.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 326,
+      "h": 326
+    },
+    "slot": {
+      "x": 148,
+      "y": 130,
+      "w": 178,
+      "h": 178,
+      "rotate": 0,
+      "fit": "contain",
+      "behind": true
+    },
+    "sortOrder": 80,
+    "derivedFrom": "supplied plate: templates/src/bufo-approves.base.png"
+  },
+  {
+    "slug": "bufo-babysits",
+    "name": "Bufo babysits \u2026",
+    "namePattern": ":bufo-babysits-{subject}:",
+    "base": "bufo-babysits.base.png",
+    "overlay": null,
+    "canvas": {
+      "w": 256,
+      "h": 256
+    },
+    "slot": {
+      "x": 20,
+      "y": 106,
+      "w": 118,
+      "h": 86,
+      "rotate": 0,
+      "fit": "contain"
+    },
+    "sortOrder": 90,
+    "derivedFrom": "supplied plate: templates/src/bufo-babysits.base.png"
   }
 ]

@@ -1,4 +1,4 @@
-import { drawComposite } from './compose'
+import { drawComposite, squareFrame } from './compose'
 import type { ComposeLayers, ManifestTemplate, SubjectTransform } from './types'
 
 type AnyCanvas = OffscreenCanvas | HTMLCanvasElement
@@ -26,7 +26,8 @@ export function composeToCanvas(
   layers: ComposeLayers,
   transform?: SubjectTransform,
 ): AnyCanvas {
-  const canvas = createCanvas(template.canvas.w, template.canvas.h)
+  const { size } = squareFrame(template.canvas)
+  const canvas = createCanvas(size, size)
   drawComposite(context2d(canvas), template, layers, transform)
   return canvas
 }
@@ -58,7 +59,8 @@ export async function composeToBlob(
   size?: number,
 ): Promise<Blob> {
   const composed = composeToCanvas(template, layers, transform)
-  const output = size && size !== template.canvas.w ? resizeCanvas(composed, size) : composed
+  const native = squareFrame(template.canvas).size
+  const output = size && size !== native ? resizeCanvas(composed, size) : composed
   return canvasToBlob(output)
 }
 

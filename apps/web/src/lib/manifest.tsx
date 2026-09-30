@@ -4,6 +4,7 @@ import {
   decodeManifest,
   type Manifest,
   type ManifestTemplate,
+  type Mosaic,
   R2_KEYS,
 } from '@bufo/shared'
 import type { ReactNode } from 'react'
@@ -13,6 +14,7 @@ import { CDN_BASE } from './env'
 type ManifestState = {
   bufos: Bufo[]
   templates: ManifestTemplate[]
+  mosaics: Mosaic[]
   bySlug: Map<string, Bufo>
   generatedAt: number
   loading: boolean
@@ -23,6 +25,7 @@ type ManifestState = {
 const EMPTY: ManifestState = {
   bufos: [],
   templates: [],
+  mosaics: [],
   bySlug: new Map(),
   generatedAt: 0,
   loading: true,
